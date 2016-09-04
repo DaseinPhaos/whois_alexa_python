@@ -35,9 +35,9 @@ def save_json_to_file(json_object, file_name):
     """
     Save a json-compatible object `json_object` as a .json file with name specified as `file_name`.
     """
-    if file_name.rstrip(".")[-1] != "json": file_name += ".json"
+    if file_name.rsplit(".")[-1] != "json": file_name += ".json"
     f = io.FileIO(file_name, 'w')
-    f.write(json.dumps(json_object, indent=1).encode())
+    f.write(json.dumps(json_object, indent=2).encode())
     f.close()
 
 class WhoIsHTMLParser(html.parser.HTMLParser):
@@ -53,10 +53,16 @@ class WhoIsHTMLParser(html.parser.HTMLParser):
     def handle_starttag(self, tag, attrs):
         if tag == "div" and attrs == [("class", "whois_result"), ("id","registryData")]:
             self._status = 1
-            self.data["registry"] = {}
+            self.data["Registry"] = {}
+            self.data["Registry"]["Name Server"] = []
+            self.data["Registry"]["Status"] = []
         if tag == "div" and attrs == [("class", "whois_result"), ("id","registrarData")]:
             self._status = 2
-            self.data["registrar"] = {}
+            self.data["Domain Status"] = [] 
+            self.data["Registrant"] = {}
+            self.data["Admin"] = {}
+            self.data["Tech"] = {}
+            self.data["Registrar"] = {}
 
     def handle_data(self, data):
         if self._status == 1:
@@ -64,13 +70,25 @@ class WhoIsHTMLParser(html.parser.HTMLParser):
             if split_at != -1:
                 k = data[:split_at]
                 v = data[split_at+1:].strip()
-                self.data["registry"][k]=v
-        if self._status == 2:
+                if k == "Name Server": self.data["Registry"]["Name Server"].append(v)
+                elif k == "Status": self.data["Registry"]["Status"].append(v)
+                else: self.data["Registry"][k]=v
+        elif self._status == 2:
             split_at = data.find(":")
             if split_at != -1:
                 k = data[:split_at]
                 v = data[split_at+1:].strip()
-                self.data["registrar"][k]=v
+                if k[:4] == "Tech" : self.data["Tech"][k[5:]] = v
+                elif k[:5] == "Admin" : self.data["Admin"][k[6:]] = v
+                elif k[:9] == "Registrar" : 
+                    if len(k) == 9 : self.data["Registrar"]["Name"] = v
+                    else: self.data["Registrar"][k[10:]] = v
+                elif k[:10] == "Registrant" : self.data["Registrant"][k[11:]] = v
+                elif k == "Domain Status" : self.data["Domain Status"].append(v)
+                elif k == "Registry Registrant ID" : self.data["Registrant"]["ID"] = v
+                elif k == "Registry Admin ID" : self.data["Admin"]["ID"] = v
+                elif k == "Registry Tech ID" : self.data["Tech"]["ID"] = v
+                else: self.data[k]=v
                 if k == "DNSSEC": self._status = 0
     def handle_endtag(self, tag):
         self._status = 0
