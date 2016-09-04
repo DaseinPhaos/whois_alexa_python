@@ -12,3 +12,6 @@
 
 # temp files
 tmp/
+
+# python cache files
+__pycache__/

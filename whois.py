@@ -13,12 +13,18 @@ import html.parser
 #     return r.json()
 
 def save_json_to_file(json_object, file_name):
+    """
+    Save a json-compatible object `json_object` as a .json file with `file_name`.
+    """
     if file_name.rstrip(".")[-1] != "json": file_name += ".json"
     f = io.FileIO(file_name, 'w')
     f.write(json.dumps(json_object, indent=1).encode())
     f.close()
 
 class WhoIsHTMLParser(html.parser.HTMLParser):
+    """
+    The derived HTML parser used to fetch data from the returned HTML page.
+    """
     def __init__(self):
         self._status = 0
         self.data = {}
@@ -50,6 +56,9 @@ class WhoIsHTMLParser(html.parser.HTMLParser):
         self._status = 0
 
 def search_via_whois(domain_name):
+    """
+    Return a json structure containing information fetched from http://www.whois.com about domain specified by `domain_name`.
+    """
     r = requests.get("http://www.whois.com/whois/"+domain_name)
     if r.status_code != requests.codes.ok:
         r.raise_for_status()
