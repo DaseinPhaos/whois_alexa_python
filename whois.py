@@ -13,7 +13,7 @@ Fetch domain information about google.com:
 ```
 import whois
 result = whois.who_is("google.com")
-# result["registrant"]["Organization"] should be "Google Inc."
+# result["Registrant"]["Organization"] should be "Google Inc."
 ```
 
 Copyright (c) 2016 Dasein Phaos
