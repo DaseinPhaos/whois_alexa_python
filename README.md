@@ -4,8 +4,8 @@ A simple module used to fetch domain info. and save them as
 .json files, using data from http://www.whois.com. 
 
 ##Requirement
-##python 3
-`requests` 2.1.0 + by Kenneth Reitz : https://github.com/kennethreitz/requests/
+*python 3*
+*requests* 2.1.0 + by Kenneth Reitz : https://github.com/kennethreitz/requests/
 
 ##Example
 Fetch domain information about google.com:
