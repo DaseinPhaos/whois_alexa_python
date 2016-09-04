@@ -1,3 +1,22 @@
+"""
+A simple module used to fetch domain info. as .json structures from
+http://www.whois.com. 
+
+Require
+--------
+python 3.0 +
+`requests` 2.1 + by Kenneth Reitz : https://github.com/kennethreitz/requests/
+
+Example
+--------
+Fetch domain information about google.com:
+```
+import whois
+result = whois.who_is("google.com")
+# result["registrar"]["Registrant Organization"] should be "Google Inc."
+```
+"""
+
 import requests
 import json
 import io
@@ -14,7 +33,7 @@ import html.parser
 
 def save_json_to_file(json_object, file_name):
     """
-    Save a json-compatible object `json_object` as a .json file with `file_name`.
+    Save a json-compatible object `json_object` as a .json file with name specified as `file_name`.
     """
     if file_name.rstrip(".")[-1] != "json": file_name += ".json"
     f = io.FileIO(file_name, 'w')
@@ -24,6 +43,7 @@ def save_json_to_file(json_object, file_name):
 class WhoIsHTMLParser(html.parser.HTMLParser):
     """
     The derived HTML parser used to fetch data from the returned HTML page.
+    User of this module shall not bother with this class.
     """
     def __init__(self):
         self._status = 0
@@ -43,21 +63,21 @@ class WhoIsHTMLParser(html.parser.HTMLParser):
             split_at = data.find(":")
             if split_at != -1:
                 k = data[:split_at]
-                v = data[split_at+1:]
+                v = data[split_at+1:].strip()
                 self.data["registry"][k]=v
         if self._status == 2:
             split_at = data.find(":")
             if split_at != -1:
                 k = data[:split_at]
-                v = data[split_at+1:]
+                v = data[split_at+1:].strip()
                 self.data["registrar"][k]=v
                 if k == "DNSSEC": self._status = 0
     def handle_endtag(self, tag):
         self._status = 0
 
-def search_via_whois(domain_name):
+def who_is(domain_name):
     """
-    Return a json structure containing information fetched from http://www.whois.com about domain specified by `domain_name`.
+    Return a json structure containing information fetched from http://www.whois.com about the domain specified by `domain_name`.
     """
     r = requests.get("http://www.whois.com/whois/"+domain_name)
     if r.status_code != requests.codes.ok:
