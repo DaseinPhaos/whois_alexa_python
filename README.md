@@ -16,9 +16,9 @@ import whois
 result = whois.who_is("google.com")
 # result["Registrant"]["Organization"] should be "Google Inc."
 
-import awis
+import alexa
 import json
-info = awis.get_domain_info("google.com")
+info = alexa.get_domain_info("google.com")
 print(json.dumps(info, indent=2))
 # now the information fetched shall be printed out neetly and nicely.
 ```
