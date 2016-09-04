@@ -2,10 +2,10 @@
 A simple module used to fetch domain info. as .json structures from
 http://www.whois.com. 
 
-Require
+Requirement
 --------
-python 3.0 +
-`requests` 2.1 + by Kenneth Reitz : https://github.com/kennethreitz/requests/
+python 3
+`requests` 2.1.0 + by Kenneth Reitz : https://github.com/kennethreitz/requests/
 
 Example
 --------
@@ -13,8 +13,10 @@ Fetch domain information about google.com:
 ```
 import whois
 result = whois.who_is("google.com")
-# result["registrar"]["Registrant Organization"] should be "Google Inc."
+# result["registrant"]["Organization"] should be "Google Inc."
 ```
+
+Copyright (c) 2016 Dasein Phaos
 """
 
 import requests
