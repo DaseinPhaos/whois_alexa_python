@@ -135,21 +135,36 @@ class _subdomain_parser(_parser_impl_base):
                 self._ready = False
 
 
+class _category_parser(_parser_impl_base):
+    def __init__(self, target_dict):
+        self._parsed_data = target_dict
+        self._href = ""
+        self._stop = False
+
+    def handle_starttag(self, tag, attrs):
+        if self._stop == False and tag == "a":
+            self._href = attrs[0][1]
+        elif tag == "tbody":
+            return _subdomain_parser(self._parsed_data)
+
+    def handle_endtag(self, tag):
+        if tag == "tbody":
+            self._stop = True
+            self._parsed_data["category"] = self._href[19:]
+
+
 class _related_tbody_parser(_parser_impl_base):
     def __init__(self, target_dict):
         self._parsed_data = target_dict
         self._ready = False
         self._index = 0
-        self._tbody_met = False
         self._parsed_data['related sites'] = []
     
     def handle_starttag(self, tag, attrs):
         if self._index < 10 and tag == "a":
             self._ready = True
         if tag == "tbody":
-            if self._tbody_met == True: 
-                return _subdomain_parser(self._parsed_data)
-            else: self._tbody_met = True
+            return _category_parser(self._parsed_data)
 
     def handle_data(self, data):
         if self._ready == True:
@@ -261,7 +276,6 @@ class _engagement_parser(_parser_impl_base):
             else:
                 self._parsed_data["user engagement"]["daily time on site"] = data.strip()
 
-
     def handle_endtag(self, tag):
         self._ready = False
         if self._index == 3:
@@ -281,7 +295,6 @@ class _visitor_tbody_parser(_parser_impl_base):
         self._buffer = {}
         self._parsed_data["visitor by country"] = []
 
-    
     def handle_data(self, data):
         if data.strip() == "": return
         self._index += 1
@@ -310,6 +323,7 @@ class _visitor_table_parser(_parser_impl_base):
         elif self._ready == True and tag == "tbody":
             return _visitor_tbody_parser(self._parsed_data)
 
+
 class _local_rank_parser(_parser_impl_base):
     def __init__(self, target_dict):
         self._parsed_data = target_dict
@@ -329,13 +343,16 @@ class _local_rank_parser(_parser_impl_base):
             self._final = True
 
     def handle_endtag(self, tag):
-        if tag == "strong": return _visitor_table_parser(self._parsed_data)
+        if tag == "strong": 
+            #return _country_parser(self._parsed_data)
+            return _visitor_table_parser(self._parsed_data)
 
 class _global_rank_parser(_parser_impl_base):
     def __init__(self, target_dict):
         self._parsed_data = target_dict
         self._ready = False
         self._final = False
+        self._next_is_country = False
     
     def handle_starttag(self, tag, attrs):
         if tag == "strong" and self._final == False:
@@ -350,6 +367,11 @@ class _global_rank_parser(_parser_impl_base):
             self._parsed_data["rank"]["global"] = data.strip()
             self._ready = False
             self._final = True
+        elif data == "Rank in ":
+            self._next_is_country = True
+        elif self._next_is_country == True:
+            self._parsed_data["country"] = data.strip()
+            self._next_is_country = False
 
 
 class _rank_sec_parser(_parser_impl_base):
@@ -392,3 +414,18 @@ def get_website_info(url):
         if p._parsed_data["rank"]["global"] == "-":
             raise ValueError("Website not found in the database.")
         return p._parsed_data
+
+def get_website_info_from_file(local_html_file):
+    with open(local_html_file, 'r', encoding="utf8") as f:
+        p = _AlexaHTMLParser()
+        p.feed(f.read())
+        if p._parsed_data["rank"]["global"] == "-":
+            raise ValueError("Website not found in the database.")
+        return p._parsed_data
+
+def get_website_info_from_str(html_data_str):
+    p = _AlexaHTMLParser()
+    p.feed(f.read())
+    if p._parsed_data["rank"]["global"] == "-":
+        raise ValueError("Website not found in the database.")
+    return p._parsed_data

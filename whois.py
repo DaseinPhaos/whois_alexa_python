@@ -80,7 +80,8 @@ class WhoIsHTMLParser(html.parser.HTMLParser):
             if split_at != -1:
                 k = data[:split_at]
                 v = data[split_at+1:].strip()
-                if k[:4] == "Tech" : self.data["Tech"][k[5:]] = v
+                if k == "Created Date": self.data["Creation Date"] = v
+                elif k[:4] == "Tech" : self.data["Tech"][k[5:]] = v
                 elif k[:5] == "Admin" : self.data["Admin"][k[6:]] = v
                 elif k[:9] == "Registrar" : 
                     if len(k) == 9 : self.data["Registrar"]["Name"] = v
