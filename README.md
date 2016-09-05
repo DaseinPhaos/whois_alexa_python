@@ -21,6 +21,11 @@ import json
 info = alexa.get_website_info("google.com")
 print(json.dumps(info, indent=2))
 # now the information fetched shall be printed out neetly and nicely.
+
+art_topsites = alexa.get_topsite_by_category("Arts/Design")
+print(json.dumps(art_topsites, indent=2))
+# A well-organized list would be printed out.
+```
 ```
 
 ##License

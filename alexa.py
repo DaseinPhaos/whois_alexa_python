@@ -17,6 +17,10 @@ import json
 info = alexa.get_website_info("google.com")
 print(json.dumps(info, indent=2))
 # now the information fetched shall be printed out neetly and nicely.
+
+art_topsites = alexa.get_topsite_by_category("Arts/Design")
+print(json.dumps(art_topsites, indent=2))
+# A well-organized list would be printed out.
 ```
 """
 
@@ -25,7 +29,8 @@ import html.parser as htmlparser
 import urllib.parse as urlparse
 import json
 
-_base_url = "http://www.alexa.com/siteinfo/"
+_siteinfo_base_url = "http://www.alexa.com/siteinfo/"
+_topsite_base_url = "http://www.alexa.com/topsites/category"
 
 class _parser_impl_base():
     def __init__(self, target_data):
@@ -385,7 +390,8 @@ class _root_parser(_parser_impl_base):
         if tag == "div" and len(attrs) > 0 and attrs[0] == ("class", "row-fluid summary"):
                 return _rank_sec_parser(self._parsed_data)
 
-class _AlexaHTMLParser(htmlparser.HTMLParser):
+
+class _AlexaSiteInfoHTMLParser(htmlparser.HTMLParser):
     def __init__(self):
         self._parsed_data = {}
         self._parser = _root_parser(self._parsed_data)
@@ -405,12 +411,99 @@ class _AlexaHTMLParser(htmlparser.HTMLParser):
             self._parser = r
 
 
+class _site_listing_parser(_parser_impl_base):
+    def __init__(self, target_data):
+        self._parsed_data = target_data
+        self._data = {}
+        self._index = -1
+        self._ready = False
+
+    def advance(self):
+        self._index += 1
+        self._ready = True
+        self._stop = False
+
+    def handle_starttag(self, tag, attrs):
+        if tag == "div" and len(attrs) == 1 and attrs[0] == ("class", "count"):
+            self.advance()
+        elif tag == "a" and len(attrs) == 1:
+            self.advance()
+        elif tag == "div" and len(attrs) == 1 and attrs[0] == ("class", "description"):
+            self.advance()
+        elif tag == "div" and len(attrs) == 1 and attrs[0] == ("class", "remainder"):
+            self.advance()
+        elif tag == "li" and len(attrs) == 1 and attrs[0] == ("class", "site-listing"):
+            return _site_listing_parser(self._parsed_data)
+    
+    def handle_data(self, data):
+        if self._ready == True:
+            self._ready = False
+            if self._index == 0: self._data['rank'] = data.strip()
+            elif self._index == 1: self._data['address'] = data.strip()
+            elif self._index == 2: self._data['description'] = data.strip()
+            elif self._index == 3: self._data['description'] += data.strip()
+
+    def handle_endtag(self, tag):
+        if self._stop == False and tag == 'li':
+            self._parsed_data['list'].append(self._data)
+            self._stop = True
+
+class _listing_root_parser(_parser_impl_base):
+    def handle_starttag(self, tag, attrs):
+        if tag == "li" and len(attrs) == 1 and attrs[0] == ("class", "site-listing"):
+            if "list" not in self._parsed_data.keys():
+                self._parsed_data["list"]=[]
+            return _site_listing_parser(self._parsed_data)
+
+    def handle_data(self, data):
+        if data.strip() == "No sites for this category.":
+            raise IndexError("NSFTC")
+
+class _AlexaTopSiteHTMLParser(htmlparser.HTMLParser):
+    def __init__(self, data):
+        self._parsed_data = data
+        self._parser = _listing_root_parser(self._parsed_data)
+        return htmlparser.HTMLParser.__init__(self)
+    
+    def handle_starttag(self, tag, attrs):
+        r = self._parser.handle_starttag(tag, attrs)
+        if r != None:
+            self._parser = r
+    
+    def handle_data(self, data):
+        self._parser.handle_data(data)
+    
+    def handle_endtag(self, tag):
+        r = self._parser.handle_endtag(tag)
+        if r != None:
+            self._parser = r
+
+def _orient_topsite_url(category, page_count = 0):
+    if page_count == 0:
+        return _topsite_base_url + "/Top/" + category
+    else:
+        return "{0};{1}/Top/{2}".format(_topsite_base_url, page_count, category)
+
+def get_topsites_by_category(category):
+    result = {"category": category}
+    try:
+        i = 0
+        while i <= 20:
+            r = requests.get(_orient_topsite_url(category, i))
+            if r.status_code != requests.codes.ok : r.raise_for_status()
+            else:
+                p = _AlexaTopSiteHTMLParser(result)
+                p.feed(r.text)
+            i += 1
+    except IndexError as identifier:
+        if identifier.args[0] != ("NSFTC"): raise identifier
+    return result
 
 def get_website_info(url):
-    r = requests.get(_base_url+url)
+    r = requests.get(_siteinfo_base_url+url)
     if r.status_code != requests.codes.ok : r.raise_for_status()
     else:
-        p = _AlexaHTMLParser()
+        p = _AlexaSiteInfoHTMLParser()
         p.feed(r.text)
         if p._parsed_data["rank"]["global"] == "-":
             raise ValueError("Website not found in the database.")
@@ -418,14 +511,14 @@ def get_website_info(url):
 
 def get_website_info_from_file(local_html_file):
     with open(local_html_file, 'r', encoding="utf8") as f:
-        p = _AlexaHTMLParser()
+        p = _AlexaSiteInfoHTMLParser()
         p.feed(f.read())
         if p._parsed_data["rank"]["global"] == "-":
             raise ValueError("Website not found in the database.")
         return p._parsed_data
 
 def get_website_info_from_str(html_data_str):
-    p = _AlexaHTMLParser()
+    p = _AlexaSiteInfoHTMLParser()
     p.feed(f.read())
     if p._parsed_data["rank"]["global"] == "-":
         raise ValueError("Website not found in the database.")
