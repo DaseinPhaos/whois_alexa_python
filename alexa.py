@@ -22,6 +22,7 @@ print(json.dumps(info, indent=2))
 
 import requests
 import html.parser as htmlparser
+import urllib.parse as urlparse
 import json
 
 _base_url = "http://www.alexa.com/siteinfo/"
@@ -150,7 +151,7 @@ class _category_parser(_parser_impl_base):
     def handle_endtag(self, tag):
         if tag == "tbody":
             self._stop = True
-            self._parsed_data["category"] = self._href[19:]
+            self._parsed_data["category"] = urlparse.unquote(self._href[19:]) 
 
 
 class _related_tbody_parser(_parser_impl_base):
