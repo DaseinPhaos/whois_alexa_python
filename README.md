@@ -1,8 +1,8 @@
 #whois_python
 ##Introduction
 Some simple modules used to fetch domain information, and save them as .json files.
-Module whois uses data from http://www.whois.com. 
-Module awis uses data from http://www.alexa.com.
+Module `whois` uses data from http://www.whois.com. 
+Module `awis` uses data from http://www.alexa.com.
 
 ##Requirement
 **python 3**
@@ -18,7 +18,7 @@ result = whois.who_is("google.com")
 
 import alexa
 import json
-info = alexa.get_domain_info("google.com")
+info = alexa.get_website_info("google.com")
 print(json.dumps(info, indent=2))
 # now the information fetched shall be printed out neetly and nicely.
 ```

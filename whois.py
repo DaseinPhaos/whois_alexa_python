@@ -105,4 +105,6 @@ def who_is(domain_name):
     else:
         p = WhoIsHTMLParser()
         p.feed(r.text)
+        if p.data == {}:
+            raise ValueError("Domain not found in the database.")
         return p.data

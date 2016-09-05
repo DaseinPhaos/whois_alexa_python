@@ -14,7 +14,7 @@ Fetch website information about google.com:
 ```
 import alexa
 import json
-info = alexa.get_domain_info("google.com")
+info = alexa.get_website_info("google.com")
 print(json.dumps(info, indent=2))
 # now the information fetched shall be printed out neetly and nicely.
 ```
@@ -27,9 +27,8 @@ import json
 _base_url = "http://www.alexa.com/siteinfo/"
 
 class _parser_impl_base():
-    _parsed_data = {}
-    
-    def __init__(self): return
+    def __init__(self, target_data):
+        self._parsed_data = target_data
 
     def handle_starttag(self, tag, attrs):  return
     
@@ -39,11 +38,11 @@ class _parser_impl_base():
 
 
 class _gender_parser(_parser_impl_base):
-    def __init__(self):
-        #global _parser_impl_base. _parsed_data
-        _parser_impl_base. _parsed_data["visitor gender"]={}
-        _parser_impl_base. _parsed_data["visitor education"] = {}
-        _parser_impl_base. _parsed_data["visitor location"] = {}
+    def __init__(self, target_dict):
+        self._parsed_data = target_dict
+        self._parsed_data["visitor gender"]={}
+        self._parsed_data["visitor education"] = {}
+        self._parsed_data["visitor location"] = {}
         self._rb = False
         self._l = 0
 
@@ -57,71 +56,72 @@ class _gender_parser(_parser_impl_base):
             self._rb = True
             self._l = 0
         elif data == "Female":
-            #global _parser_impl_base. _parsed_data
-            _parser_impl_base. _parsed_data["visitor gender"]['male'] = str(self._l / 200.0)
+            #global self._parsed_data
+            self._parsed_data["visitor gender"]['male'] = str(self._l / 200.0)
             self._l = 0
         elif data == "No College":
-            #global _parser_impl_base. _parsed_data
-            _parser_impl_base. _parsed_data["visitor gender"]['female'] = str(self._l / 200.0)
+            #global self._parsed_data
+            self._parsed_data["visitor gender"]['female'] = str(self._l / 200.0)
             self._l = 0
         elif data == "Some College":
-            #global _parser_impl_base. _parsed_data
-            _parser_impl_base. _parsed_data["visitor education"]['no college'] = str(self._l / 200.0)
+            #global self._parsed_data
+            self._parsed_data["visitor education"]['no college'] = str(self._l / 200.0)
             self._l = 0
         elif data == "Graduate School":
-            #global _parser_impl_base. _parsed_data
-            _parser_impl_base. _parsed_data["visitor education"]['some college'] = str(self._l / 200.0)
+            #global self._parsed_data
+            self._parsed_data["visitor education"]['some college'] = str(self._l / 200.0)
             self._l = 0
         elif data == "College":
-            #global _parser_impl_base. _parsed_data
-            _parser_impl_base. _parsed_data["visitor education"]['graduate'] = str(self._l / 200.0)
+            #global self._parsed_data
+            self._parsed_data["visitor education"]['graduate'] = str(self._l / 200.0)
             self._l = 0
         elif data == "Home":
-            #global _parser_impl_base. _parsed_data
-            _parser_impl_base. _parsed_data["visitor education"]['college'] = str(self._l / 200.0)
+            #global self._parsed_data
+            self._parsed_data["visitor education"]['college'] = str(self._l / 200.0)
             self._l = 0
         elif data == "School":
-            #global _parser_impl_base. _parsed_data
-            _parser_impl_base. _parsed_data["visitor location"]['home'] = str(self._l / 200.0)
+            #global self._parsed_data
+            self._parsed_data["visitor location"]['home'] = str(self._l / 200.0)
             self._l = 0
         elif data == "Work":
-            #global _parser_impl_base. _parsed_data
-            _parser_impl_base. _parsed_data["visitor location"]['school'] = str(self._l / 200.0)
+            #global self._parsed_data
+            self._parsed_data["visitor location"]['school'] = str(self._l / 200.0)
             self._l = 0
         elif data == "Login with Facebook":
-            #global _parser_impl_base. _parsed_data
-            _parser_impl_base. _parsed_data["visitor location"]['work'] = str(self._l / 200.0)
+            #global self._parsed_data
+            self._parsed_data["visitor location"]['work'] = str(self._l / 200.0)
             self._l = 0
 
 
 class _loadspeed_parser(_parser_impl_base):
-    def __init__(self):
+    def __init__(self, target_dict):
+        self._parsed_data = target_dict
         self._ready = True
 
     def handle_starttag(self, tag, attrs):
         if tag == "div" and len(attrs) > 0 and attrs[0] == ("class", "row-fluid col-pad pybar demo-gender"):
-            return _gender_parser()
+            return _gender_parser(self._parsed_data)
 
     def handle_data(self, data):
         if data.strip() == "": return
         if self._ready == True:
-            ##global _parser_impl_base. _parsed_data
-            _parser_impl_base. _parsed_data['loadspeed'] = data.strip()
+            ##global self._parsed_data
+            self._parsed_data['loadspeed'] = data.strip()
             self._ready = False
 
 
 class _subdomain_parser(_parser_impl_base):
-    def __init__(self):
+    def __init__(self, target_dict):
+        self._parsed_data = target_dict
         self._index = -1
         self._ready = False
-        #global _parser_impl_base. _parsed_data
-        _parser_impl_base. _parsed_data['subdomains'] = {}
+        self._parsed_data['subdomains'] = {}
 
     def handle_starttag(self, tag, attrs):
         if self._index < 9 and tag == "span":
             self._ready = True
         if tag == "section" and len(attrs) > 0 and attrs[0] == ("id", "loadspeed-panel-content"):
-            return _loadspeed_parser()
+            return _loadspeed_parser(self._parsed_data)
 
     
     def handle_data(self, data):
@@ -131,30 +131,29 @@ class _subdomain_parser(_parser_impl_base):
             if self._index % 2 == 0:
                 self._k = data.strip()
             else:
-                #global _parser_impl_base. _parsed_data
-                _parser_impl_base. _parsed_data['subdomains'][self._k] = data.strip()
+                self._parsed_data['subdomains'][self._k] = data.strip()
                 self._ready = False
 
 
 class _related_tbody_parser(_parser_impl_base):
-    def __init__(self):
+    def __init__(self, target_dict):
+        self._parsed_data = target_dict
         self._ready = False
         self._index = 0
         self._tbody_met = False
-        #global _parser_impl_base. _parsed_data
-        _parser_impl_base. _parsed_data['related sites'] = []
+        self._parsed_data['related sites'] = []
     
     def handle_starttag(self, tag, attrs):
         if self._index < 10 and tag == "a":
             self._ready = True
         if tag == "tbody":
-            if self._tbody_met == True: return _subdomain_parser()
+            if self._tbody_met == True: 
+                return _subdomain_parser(self._parsed_data)
             else: self._tbody_met = True
 
     def handle_data(self, data):
         if self._ready == True:
-            #global _parser_impl_base. _parsed_data
-            _parser_impl_base. _parsed_data['related sites'].append(data.strip())
+            self._parsed_data['related sites'].append(data.strip())
             self._index += 1
             self._ready = False
 
@@ -162,31 +161,31 @@ class _related_tbody_parser(_parser_impl_base):
 class _related_content_parser(_parser_impl_base):
     def handle_starttag(self, tag, attrs):
         if tag == "tbody":
-            return _related_tbody_parser()
+            return _related_tbody_parser(self._parsed_data)
 
 class _linksin_parser(_parser_impl_base):
-    def __init__(self):
+    def __init__(self, target_dict):
+        self._parsed_data = target_dict
         self._ready = False
 
     def handle_starttag(self, tag, attrs):
         if tag == "span" and len(attrs) > 0 and attrs[0] == ("class", "font-4 box1-r"):
             self._ready = True
         elif tag == "section" and len(attrs) > 0 and attrs[0] == ("id", "related-content"):
-            return _related_content_parser()
+            return _related_content_parser(self._parsed_data)
 
     def handle_data(self, data):
         if self._ready == True:
-            #global _parser_impl_base. _parsed_data
-            _parser_impl_base. _parsed_data["total sites linking in"] = data
+            self._parsed_data["total sites linking in"] = data
             self._ready = False
 
 class _upstream_tbody_parser(_parser_impl_base):
-    def __init__(self):
+    def __init__(self, target_dict):
+        self._parsed_data = target_dict
         self._index = -1
         self._k_ready = False
         self._v_ready = False
-        #global _parser_impl_base. _parsed_data
-        _parser_impl_base. _parsed_data['upstreams'] = {}
+        self._parsed_data['upstreams'] = {}
 
     def handle_starttag(self, tag, attrs):
         if self._index < 5:
@@ -194,8 +193,7 @@ class _upstream_tbody_parser(_parser_impl_base):
             elif tag == "span" and len(attrs) == 1 and attrs[0] == ("class", ""):
                 self._v_ready = True
         elif tag == "section" and len(attrs) > 0 and attrs[0] == ("id", "linksin-panel-content"):
-            return _linksin_parser()
-
+            return _linksin_parser(self._parsed_data)
     
     def handle_data(self, data):
         if data.strip() == "": return
@@ -204,17 +202,16 @@ class _upstream_tbody_parser(_parser_impl_base):
             self._k = data
             self._k_ready = False
         elif self._v_ready == True:
-            #global _parser_impl_base. _parsed_data
-            _parser_impl_base. _parsed_data['upstreams'][self._k] = data.strip()
+            self._parsed_data['upstreams'][self._k] = data.strip()
             self._v_ready = False
     
 
 class _keyword_tbody_parser(_parser_impl_base):
-    def __init__(self):
+    def __init__(self, target_dict):
+        self._parsed_data = target_dict
         self._index = -1
         self._ready = False
-        #global _parser_impl_base. _parsed_data
-        _parser_impl_base. _parsed_data['keywords'] = {}
+        self._parsed_data['keywords'] = {}
 
     def handle_starttag(self, tag, attrs):
         if tag == "td" and len(attrs) == 2:
@@ -222,32 +219,32 @@ class _keyword_tbody_parser(_parser_impl_base):
         elif tag == "span" and len(attrs) == 1 and attrs[0] == ("class", ""):
             self._ready = True
         elif tag == "tbody":
-            return _upstream_tbody_parser()
+            return _upstream_tbody_parser(self._parsed_data)
     
     def handle_data(self, data):
         if self._ready == True:
-            #global _parser_impl_base. _parsed_data
-            _parser_impl_base. _parsed_data['keywords'][self._k] = data.strip()
+            self._parsed_data['keywords'][self._k] = data.strip()
             self._ready = False
 
 
 class _keyword_table_parser(_parser_impl_base):
-    def __init__(self):
+    def __init__(self, target_dict):
+        self._parsed_data = target_dict
         self._ready = False
 
     def handle_starttag(self, tag, attrs):
         if tag == "table" and len(attrs) > 2 and attrs[2] == ("id", "keywords_top_keywords_table"):
             self._ready = True
         elif self._ready == True and tag == 'tbody':
-            return _keyword_tbody_parser()
+            return _keyword_tbody_parser(self._parsed_data)
 
 
 class _engagement_parser(_parser_impl_base):
-    def __init__(self):
+    def __init__(self, target_dict):
+        self._parsed_data = target_dict
         self._index = 0
         self._ready = False
-        #global _parser_impl_base. _parsed_data
-        _parser_impl_base. _parsed_data["user engagement"] = {}
+        self._parsed_data["user engagement"] = {}
 
     def handle_starttag(self, tag, attrs):
         if tag == "strong":
@@ -256,65 +253,66 @@ class _engagement_parser(_parser_impl_base):
         
     def handle_data(self, data):
         if self._ready == True:
-            #global _parser_impl_base. _parsed_data
+            #global self._parsed_data
             if self._index == 1:
-                _parser_impl_base. _parsed_data["user engagement"]["bounce rate"] = data.strip()
+                self._parsed_data["user engagement"]["bounce rate"] = data.strip()
             elif self._index == 2:
-                _parser_impl_base. _parsed_data["user engagement"]["daily pageviews per visitor"] = data.strip()
+                self._parsed_data["user engagement"]["daily pageviews per visitor"] = data.strip()
             else:
-                _parser_impl_base. _parsed_data["user engagement"]["daily time on site"] = data.strip()
+                self._parsed_data["user engagement"]["daily time on site"] = data.strip()
 
 
     def handle_endtag(self, tag):
         self._ready = False
         if self._index == 3:
-             return _keyword_table_parser()
+             return _keyword_table_parser(self._parsed_data)
 
 
 class _engagement_content_parser(_parser_impl_base):
     def handle_starttag(self, tag, attrs):
         if tag == "section" and len(attrs) > 0 and attrs[0] == ("id", "engagement-content"):
-            return _engagement_parser()
+            return _engagement_parser(self._parsed_data)
 
 
 class _visitor_tbody_parser(_parser_impl_base):
-    def __init__(self):
+    def __init__(self, target_dict):
+        self._parsed_data = target_dict
         self._index = -1
         self._buffer = {}
-        #global _parser_impl_base. _parsed_data
-        _parser_impl_base. _parsed_data["visitor by country"] = []
+        self._parsed_data["visitor by country"] = []
 
     
     def handle_data(self, data):
         if data.strip() == "": return
         self._index += 1
-        #global _parser_impl_base. _parsed_data
         if self._index % 3 == 0:
             self._buffer["country"] = data[2:]
         elif self._index % 3 == 1:
             self._buffer["percentage"] = data
         elif self._index % 3 == 2:
             self._buffer["rank in country"] = data
-            _parser_impl_base. _parsed_data["visitor by country"].append(self._buffer)
+            self._parsed_data["visitor by country"].append(self._buffer)
             self._buffer = {}
 
     def handle_endtag(self, tag):
         if tag == "tbody":
-            return _engagement_content_parser()
+            return _engagement_content_parser(self._parsed_data)
 
 
 class _visitor_table_parser(_parser_impl_base):
-    def __init__(self):
+    def __init__(self, target_dict):
+        self._parsed_data = target_dict
         self._ready = False
 
     def handle_starttag(self, tag, attrs):
         if tag == "table" and len(attrs) > 2 and attrs[2] == ("id", "demographics_div_country_table"):
             self._ready = True
         elif self._ready == True and tag == "tbody":
-            return _visitor_tbody_parser()
+            return _visitor_tbody_parser(self._parsed_data)
 
 class _local_rank_parser(_parser_impl_base):
-    def __init__(self):
+    def __init__(self, target_dict):
+        self._parsed_data = target_dict
         self._ready = False
         self._final = False
 
@@ -325,16 +323,17 @@ class _local_rank_parser(_parser_impl_base):
     def handle_data(self, data):
         if data.strip() == "": return
         if self._ready == True:
-            #global _parser_impl_base. _parsed_data
-            _parser_impl_base. _parsed_data["rank"]["local"] = data.strip()
+            #global self._parsed_data
+            self._parsed_data["rank"]["local"] = data.strip()
             self._ready = False
             self._final = True
 
     def handle_endtag(self, tag):
-        if tag == "strong": return _visitor_table_parser()
+        if tag == "strong": return _visitor_table_parser(self._parsed_data)
 
 class _global_rank_parser(_parser_impl_base):
-    def __init__(self):
+    def __init__(self, target_dict):
+        self._parsed_data = target_dict
         self._ready = False
         self._final = False
     
@@ -342,14 +341,13 @@ class _global_rank_parser(_parser_impl_base):
         if tag == "strong" and self._final == False:
             self._ready = True
         elif tag == "span" and len(attrs) > 0 and attrs[0] == ("class", "bottom"):
-            return _local_rank_parser()
+            return _local_rank_parser(self._parsed_data)
 
     def handle_data(self, data):
         if data.strip() == "": return
         if self._ready == True:
-            #global _parser_impl_base. _parsed_data
-            _parser_impl_base. _parsed_data["rank"] = {}
-            _parser_impl_base. _parsed_data["rank"]["global"] = data.strip()
+            self._parsed_data["rank"] = {}
+            self._parsed_data["rank"]["global"] = data.strip()
             self._ready = False
             self._final = True
 
@@ -357,19 +355,17 @@ class _global_rank_parser(_parser_impl_base):
 class _rank_sec_parser(_parser_impl_base):
     def handle_starttag(self, tag, attrs):
         if tag == "span" and len(attrs) > 0 and attrs[0] == ("class", "bottom"):
-            return _global_rank_parser()
+            return _global_rank_parser(self._parsed_data)
 
 class _root_parser(_parser_impl_base):
-    
     def handle_starttag(self, tag, attrs):
         if tag == "div" and len(attrs) > 0 and attrs[0] == ("class", "row-fluid summary"):
-                return _rank_sec_parser()
+                return _rank_sec_parser(self._parsed_data)
 
-class AlexaHTMLParser(htmlparser.HTMLParser):
+class _AlexaHTMLParser(htmlparser.HTMLParser):
     def __init__(self):
-        self._parser = _root_parser()
-        #global _parser_impl_base. _parsed_data
-        _parser_impl_base. _parsed_data = {}
+        self._parsed_data = {}
+        self._parser = _root_parser(self._parsed_data)
         return htmlparser.HTMLParser.__init__(self)
     
     def handle_starttag(self, tag, attrs):
@@ -387,11 +383,12 @@ class AlexaHTMLParser(htmlparser.HTMLParser):
 
 
 
-def get_domain_info(url):
+def get_website_info(url):
     r = requests.get(_base_url+url)
     if r.status_code != requests.codes.ok : r.raise_for_status()
     else:
-        p = AlexaHTMLParser()
+        p = _AlexaHTMLParser()
         p.feed(r.text)
-        #global _parser_impl_base. _parsed_data
-        return _parser_impl_base. _parsed_data
+        if p._parsed_data["rank"]["global"] == "-":
+            raise ValueError("Website not found in the database.")
+        return p._parsed_data
