@@ -7,8 +7,9 @@
 *.userosscache
 *.sln.docstates
 
-# User-specific files (MonoDevelop/Xamarin Studio)
+# User-specific files (MonoDevelop/Xamarin Studio/visual code)
 *.userprefs
+.vscode/
 
 # temp files
 tmp/
